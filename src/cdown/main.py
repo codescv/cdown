@@ -1,6 +1,6 @@
 import os
 from cdown.config import load_config
-from cdown.provider import get_provider
+from cdown.input_provider import get_provider
 from cdown.downloader import download_files
 from cdown.uploader import Uploader
 from cdown.mapping import get_mapping
