@@ -1,0 +1,29 @@
+# Input configuration
+input:
+  type: "csv" # Options: "csv", "bigquery", "google_sheet", "text"
+  source: "path/to/your/input.csv" # Path to file, BigQuery table ID, or Google Sheet name
+  url_column: "url" # For CSV, BigQuery, Google Sheet
+
+# Output configuration (for mapping)
+output:
+  type: "csv" # Options: "csv", "bigquery", "google_sheet"
+  destination: "path/to/your/mapping.csv" # Path to file, BigQuery table ID, or Google Sheet name
+  source_column: "source_url"
+  gcs_column: "gcs_uri"
+
+# GCS Uploader configuration
+gcs:
+  project_id: "your-gcp-project-id"
+  bucket_name: "your-gcs-bucket-name"
+  destination_path: "downloads/" # Optional: a prefix in the bucket
+
+# Downloader configuration
+downloader:
+  max_threads: 8
+  max_retries: 3
+  retry_wait_time: 5 # in seconds
+  download_dir: "/tmp/cdown_downloads" # Temporary local directory for downloads
+
+# Resume functionality
+resume:
+  enabled: true

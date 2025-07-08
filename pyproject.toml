@@ -1,0 +1,25 @@
+[project]
+name = "cdown"
+version = "0.1.0"
+description = "A multi-threaded cloud downloader."
+authors = [{ name = "Chi Zhang", email = "chi.zhang@codescv.com" }]
+requires-python = ">=3.10"
+dependencies = [
+    "google-cloud-storage",
+    "google-cloud-bigquery",
+    "gspread",
+    "pyyaml",
+    "requests",
+    "pandas",
+    "google-auth-oauthlib",
+    "db-dtypes"
+]
+
+[project.scripts]
+cdown = "cdown.main:main"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest",
+    "pyright"
+]

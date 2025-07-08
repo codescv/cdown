@@ -1,0 +1,14 @@
+A multi thread cloud downloader implemented in python.
+
+1. The input can be read from google sheet, bigquery table, csv or plain text.
+   1.1 If input from google sheet, bigquery or csv file, the column containing the file url to download is configurable.
+   1.2 If input from plain text file: one url per line.
+2. After the file is downloaded, it can be uploaded to google cloud storage (destination path is configurable).
+3. The mapping between the source file and target GCS uri can be stored in 3 different formats: a csv file, a bigquery table or Google Sheet.
+4. Support resuming downloading. Avoid downloading some file if it's already downloaded.
+5. The main script is called `download`.
+6. Configurations can be provided from a file called `config.yaml`.
+7. The maximum number of threads can be configured.
+8. The maximum number of retries, wait time before retry can also be configured.
+9. Allow resuming downloads. Check the GCS uri for existence to avoid downloading the same file. 
+10. The project is managed using `uv` for package management. create the necessary files.
