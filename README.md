@@ -1,65 +1,50 @@
 # cdown: A Multi-threaded Cloud Downloader
 
-`cdown` is a powerful and configurable multi-threaded downloader written in Python. It can read a list of URLs from various sources, download the files concurrently, and upload them to Google Cloud Storage. It also keeps a mapping of the downloaded files and their corresponding GCS URIs.
+`cdown` is a powerful and configurable multi-threaded downloader written in Python. It can read a list of URLs from various sources, download the files concurrently, and upload them to Google Cloud Storage. The GCS object name is a hash of the source URL, ensuring that a URL is only ever downloaded and stored once.
 
 ## Features
 
-*   **Multi-threaded Downloading**: Downloads multiple files concurrently to speed up the process.
-*   **Resumable**: Can resume downloads and avoid re-downloading files that already exist in the destination.
+*   **Concurrent Downloading and Uploading**: Downloads and uploads multiple files in parallel to maximize throughput.
+*   **Idempotent**: By hashing the source URL to create the GCS object name, `cdown` ensures that a file from a given URL is only downloaded once.
+*   **Resumable**: Can resume a previous run and automatically skips files that already exist in the destination.
 *   **Multiple Input Sources**: Reads URLs from:
     *   CSV files
     *   BigQuery tables
     *   Google Sheets
     *   Plain text files
-*   **Flexible Output Mapping**: Stores the mapping between source URLs and GCS URIs in:
-    *   CSV files
-    *   BigQuery tables
-    *   Google Sheets
 *   **Configurable**: All aspects of the downloader can be configured through a `config.yaml` file.
 *   **Error Handling**: Retries downloads on failure with configurable wait times.
 
 ## Installation
 
-The project is managed using `uv`.
+You can install `cdown` directly from its GitHub repository using `uv`:
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd cdown
-    ```
+```bash
+uv tool install git+https://github.com/codescv/cdown.git
+```
 
-2.  **Create a virtual environment:**
-    ```bash
-    uv venv
-    ```
+## Usage
 
-3.  **Activate the virtual environment:**
-    ```bash
-    source .venv/bin/activate
-    ```
+Once installed, you can run the downloader from the command line:
 
-4.  **Install the project and its dependencies:**
-    ```bash
-    uv pip install -e .
-    ```
+```bash
+cdown --config /path/to/your/config.yaml
+```
 
-## Configuration
+### Command-Line Options
 
-The downloader is configured using the `config.yaml` file. Here is an overview of the available options:
+*   `--config`: Specifies the path to the configuration file. Defaults to `config.yaml` in the current directory.
+
+### Configuration
+
+The downloader is configured using a YAML file. Here is an overview of the available options:
 
 ```yaml
 # Input configuration
 input:
   type: "csv" # Options: "csv", "bigquery", "google_sheet", "text"
   source: "path/to/your/input.csv" # Path to file, BigQuery table ID, or Google Sheet name
-  url_column: "url" # For CSV, BigQuery, Google Sheet
-
-# Output configuration (for mapping)
-output:
-  type: "csv" # Options: "csv", "bigquery", "google_sheet"
-  destination: "path/to/your/mapping.csv" # Path to file, BigQuery table ID, or Google Sheet name
-  source_column: "source_url"
-  gcs_column: "gcs_uri"
+  url_column: "url" # Required for "csv", "bigquery", and "google_sheet" types
 
 # GCS Uploader configuration
 gcs:
@@ -87,17 +72,33 @@ To use Google Cloud services (BigQuery, Google Cloud Storage, Google Sheets), yo
 gcloud auth application-default login
 ```
 
-For Google Sheets, you may need to enable the Google Sheets API in your GCP project and configure OAuth 2.0.
+For Google Sheets, you may also need to configure OAuth 2.0. Please refer to the [gspread authentication documentation](https://docs.gspread.org/en/latest/oauth2.html) for detailed instructions.
 
-## Usage
+## Development
 
-Once you have configured `config.yaml`, you can run the downloader using the following command:
+To work on `cdown` locally, follow these steps:
 
-```bash
-cdown
-```
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd cdown
+    ```
 
-The script will read the URLs from your specified source, download them, upload them to GCS, and save the mappings to your specified destination.
+2.  **Create and activate a virtual environment using `uv`:**
+    ```bash
+    uv sync
+    source .venv/bin/activate
+    ```
+
+3.  **Install the project in editable mode:**
+    ```bash
+    uv pip install -e .
+    ```
+
+4.  **Run the tool:**
+    ```bash
+    cdown --config config.yaml
+    ```
 
 ## Contributing
 
