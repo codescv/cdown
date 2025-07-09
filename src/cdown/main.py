@@ -4,6 +4,7 @@ from cdown.input_provider import get_provider
 from cdown.downloader import download_and_process_files
 from cdown.uploader import Uploader
 from cdown.cmd import parse_args
+from tqdm import tqdm
 
 def main():
     """Main function to run the downloader."""
@@ -20,26 +21,23 @@ def main():
     )
 
     if config["resume"]["enabled"]:
-        print("Resume enabled. Checking for existing files in GCS.")
+        tqdm.write("Resume enabled. Checking for existing files in GCS.")
         urls_to_download = [
-            url for url in urls if not uploader.check_file_exists(url)
+            url for url in tqdm(urls, desc="Checking existing files") if not uploader.check_file_exists(url)
         ]
-        print(f"Found {len(urls) - len(urls_to_download)} existing files. Skipping them.")
+        tqdm.write(f"Found {len(urls) - len(urls_to_download)} existing files. Skipping them.")
     else:
         urls_to_download = urls
 
     def upload_and_cleanup(url, local_path):
         """Callback function to upload a file and then delete it."""
         try:
-            print(f"Downloaded {url} to {local_path}")
-            gcs_uri = uploader.upload_file(local_path, url)
-            print(f"Uploaded {local_path} to {gcs_uri}")
+            uploader.upload_file(local_path, url)
         except Exception as e:
-            print(f"Failed to upload {url}: {e}")
+            tqdm.write(f"Failed to upload {url}: {e}")
         finally:
             if os.path.exists(local_path):
                 os.remove(local_path)
-                print(f"Deleted local file: {local_path}")
 
     downloader_config = config["downloader"]
     download_and_process_files(

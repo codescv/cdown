@@ -12,7 +12,8 @@ dependencies = [
     "requests",
     "pandas",
     "google-auth-oauthlib",
-    "db-dtypes"
+    "db-dtypes",
+    "tqdm"
 ]
 
 [project.scripts]
@@ -23,3 +24,4 @@ dev-dependencies = [
     "pytest",
     "pyright"
 ]
+package = true

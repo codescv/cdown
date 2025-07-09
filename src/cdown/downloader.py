@@ -2,6 +2,7 @@ import requests
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
 
 def download_file(url, download_dir, max_retries, retry_wait_time, callback=None):
     """Downloads a single file with retries and executes a callback on success."""
@@ -22,7 +23,6 @@ def download_file(url, download_dir, max_retries, retry_wait_time, callback=None
             
             return url, temp_local_path, None
         except requests.exceptions.RequestException as e:
-            print(f"Attempt {attempt + 1} failed for {url}: {e}")
             if attempt < max_retries - 1:
                 time.sleep(retry_wait_time)
             else:
@@ -38,8 +38,8 @@ def download_and_process_files(urls, download_dir, max_threads, max_retries, ret
             executor.submit(download_file, url, download_dir, max_retries, retry_wait_time, callback): url
             for url in urls
         }
-        for future in as_completed(future_to_url):
+        for future in tqdm(as_completed(future_to_url), total=len(urls), desc="Downloading files"):
             _, _, error = future.result()
             if error:
                 url = future_to_url[future]
-                print(f"Failed to download {url} after {max_retries} retries.")
+                tqdm.write(f"Failed to download {url} after {max_retries} retries.")

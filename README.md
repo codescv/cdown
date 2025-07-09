@@ -89,13 +89,9 @@ To work on `cdown` locally, follow these steps:
     uv sync
     source .venv/bin/activate
     ```
+    This should automatically install the cdown script in the virtual env.
 
-3.  **Install the project in editable mode:**
-    ```bash
-    uv pip install -e .
-    ```
-
-4.  **Run the tool:**
+3.  **Run the tool:**
     ```bash
     cdown --config config.yaml
     ```
