@@ -3,11 +3,12 @@ from cdown.config import load_config
 from cdown.input_provider import get_provider
 from cdown.downloader import download_files
 from cdown.uploader import Uploader
-from cdown.mapping import get_mapping
+from cdown.cmd import parse_args
 
 def main():
     """Main function to run the downloader."""
-    config = load_config()
+    args = parse_args()
+    config = load_config(args.config)
 
     provider = get_provider(config)
     urls = provider.get_urls()
@@ -17,11 +18,9 @@ def main():
         config["gcs"]["bucket_name"],
         config["gcs"]["destination_path"],
     )
-    mapping = get_mapping(config)
 
     if config["resume"]["enabled"]:
         print("Resume enabled. Checking for existing files in GCS.")
-        existing_gcs_uris = mapping.get_existing_mappings()
         urls_to_download = [
             url for url in urls if not uploader.check_file_exists(url)
         ]
@@ -48,10 +47,8 @@ def main():
         try:
             gcs_uri = uploader.upload_file(local_path, url)
             print(f"Uploaded {local_path} to {gcs_uri}")
-            mapping.save_mapping(url, gcs_uri)
-            print(f"Saved mapping for {url} to {gcs_uri}")
         except Exception as e:
-            print(f"Failed to upload or map {url}: {e}")
+            print(f"Failed to upload {url}: {e}")
         finally:
             if os.path.exists(local_path):
                 os.remove(local_path)

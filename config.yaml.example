@@ -4,13 +4,6 @@ input:
   source: "path/to/your/input.csv" # Path to file, BigQuery table ID, or Google Sheet name
   url_column: "url" # For CSV, BigQuery, Google Sheet
 
-# Output configuration (for mapping)
-output:
-  type: "csv" # Options: "csv", "bigquery", "google_sheet"
-  destination: "path/to/your/mapping.csv" # Path to file, BigQuery table ID, or Google Sheet name
-  source_column: "source_url"
-  gcs_column: "gcs_uri"
-
 # GCS Uploader configuration
 gcs:
   project_id: "your-gcp-project-id"
