@@ -11,7 +11,7 @@ def main():
     config = load_config(args.config)
 
     provider = get_provider(config)
-    urls = provider.get_urls()
+    urls = list(set(provider.get_urls()))
 
     uploader = Uploader(
         config["gcs"]["project_id"],
