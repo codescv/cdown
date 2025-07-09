@@ -1,7 +1,7 @@
 import os
 from cdown.config import load_config
 from cdown.input_provider import get_provider
-from cdown.downloader import download_files
+from cdown.downloader import download_and_process_files
 from cdown.uploader import Uploader
 from cdown.cmd import parse_args
 
@@ -28,23 +28,10 @@ def main():
     else:
         urls_to_download = urls
 
-    downloader_config = config["downloader"]
-    download_results = download_files(
-        urls_to_download,
-        downloader_config["download_dir"],
-        downloader_config["max_threads"],
-        downloader_config["max_retries"],
-        downloader_config["retry_wait_time"],
-    )
-
-    for url, local_path, error in download_results:
-        if error:
-            print(f"Failed to download {url}: {error}")
-            continue
-
-        print(f"Downloaded {url} to {local_path}")
-
+    def upload_and_cleanup(url, local_path):
+        """Callback function to upload a file and then delete it."""
         try:
+            print(f"Downloaded {url} to {local_path}")
             gcs_uri = uploader.upload_file(local_path, url)
             print(f"Uploaded {local_path} to {gcs_uri}")
         except Exception as e:
@@ -52,6 +39,17 @@ def main():
         finally:
             if os.path.exists(local_path):
                 os.remove(local_path)
+                print(f"Deleted local file: {local_path}")
+
+    downloader_config = config["downloader"]
+    download_and_process_files(
+        urls_to_download,
+        downloader_config["download_dir"],
+        downloader_config["max_threads"],
+        downloader_config["max_retries"],
+        downloader_config["retry_wait_time"],
+        callback=upload_and_cleanup,
+    )
 
 if __name__ == "__main__":
     main()
