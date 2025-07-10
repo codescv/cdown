@@ -80,7 +80,7 @@ To work on `cdown` locally, follow these steps:
 
 1.  **Clone the repository:**
     ```bash
-    git clone <repository-url>
+    git clone https://github.com/codescv/cdown.git
     cd cdown
     ```
 

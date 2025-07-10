@@ -20,15 +20,6 @@ def main():
         config["gcs"]["destination_path"],
     )
 
-    if config["resume"]["enabled"]:
-        tqdm.write("Resume enabled. Checking for existing files in GCS.")
-        urls_to_download = [
-            url for url in tqdm(urls, desc="Checking existing files") if not uploader.check_file_exists(url)
-        ]
-        tqdm.write(f"Found {len(urls) - len(urls_to_download)} existing files. Skipping them.")
-    else:
-        urls_to_download = urls
-
     def upload_and_cleanup(url, local_path):
         """Callback function to upload a file and then delete it."""
         try:
@@ -40,12 +31,15 @@ def main():
                 os.remove(local_path)
 
     downloader_config = config["downloader"]
+    uploader_for_check = uploader if config["resume"]["enabled"] else None
+    
     download_and_process_files(
-        urls_to_download,
+        urls,
         downloader_config["download_dir"],
         downloader_config["max_threads"],
         downloader_config["max_retries"],
         downloader_config["retry_wait_time"],
+        uploader=uploader_for_check,
         callback=upload_and_cleanup,
     )
 
