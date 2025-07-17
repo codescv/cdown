@@ -1,10 +1,12 @@
 from google.cloud import storage
 import os
 import hashlib
+from tqdm import tqdm
 
-def _calculate_hash(url):
-    """Calculates the SHA256 hash of a URL."""
-    return hashlib.sha256(url.encode("utf-8")).hexdigest()
+def get_gcs_object_name(source_url, destination_path):
+    """Calculates the GCS object name from the source URL."""
+    url_hash = hashlib.sha256(source_url.encode("utf-8")).hexdigest()
+    return os.path.join(destination_path, url_hash)
 
 class Uploader:
     """Handles uploading files to Google Cloud Storage."""
@@ -18,24 +20,40 @@ class Uploader:
 
     def get_gcs_uri(self, source_url):
         """Returns the GCS URI for a given source URL."""
-        url_hash = _calculate_hash(source_url)
-        gcs_path = os.path.join(self.destination_path, url_hash)
+        gcs_path = get_gcs_object_name(source_url, self.destination_path)
         return f"gs://{self.bucket_name}/{gcs_path}"
 
-    def upload_file(self, local_path, source_url):
-        """Uploads a file to GCS using the hash of the source_url as the name."""
-        gcs_uri = self.get_gcs_uri(source_url)
-        gcs_path = gcs_uri.replace(f"gs://{self.bucket_name}/", "")
-        blob = self.bucket.blob(gcs_path)
-
+    def upload_file(self, local_path, gcs_object_name):
+        """Uploads a file to a specific GCS object path."""
+        blob = self.bucket.blob(gcs_object_name)
         if not blob.exists():
             blob.upload_from_filename(local_path)
         
-        return gcs_uri
+        return f"gs://{self.bucket_name}/{gcs_object_name}"
 
     def check_file_exists(self, source_url):
         """Checks if a file already exists in GCS to avoid re-downloading."""
-        gcs_uri = self.get_gcs_uri(source_url)
-        gcs_path = gcs_uri.replace(f"gs://{self.bucket_name}/", "")
-        blob = self.bucket.blob(gcs_path)
+        gcs_object_name = get_gcs_object_name(source_url, self.destination_path)
+        blob = self.bucket.blob(gcs_object_name)
         return blob.exists()
+
+def upload_worker(upload_queue, uploader):
+    """Worker function to upload files from a queue."""
+    while True:
+        item = upload_queue.get()
+        if item is None:
+            break
+        
+        local_path = item["local_path"]
+        gcs_object_name = item["gcs_object_name"]
+        source_url = item["source_url"]
+
+        try:
+            if gcs_object_name:
+                uploader.upload_file(local_path, gcs_object_name)
+        except Exception as e:
+            tqdm.write(f"Failed to upload {source_url}: {e}")
+        finally:
+            if os.path.exists(local_path):
+                os.remove(local_path)
+            upload_queue.task_done()

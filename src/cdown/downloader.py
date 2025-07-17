@@ -1,52 +1,52 @@
 import requests
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
+from cdown.uploader import get_gcs_object_name
 
-def download_file(url, download_dir, max_retries, retry_wait_time, uploader=None, callback=None):
+def download_worker(download_queue, upload_queue, config, uploader=None):
     """
-    Downloads a single file with retries.
-    If an uploader is provided, checks for existence before downloading.
-    Executes a callback on successful download.
+    Worker function to download files from a queue.
     """
-    if uploader and uploader.check_file_exists(url):
-        return url, None, "skipped"
+    download_dir = config["downloader"]["download_dir"]
+    max_retries = config["downloader"]["max_retries"]
+    retry_wait_time = config["downloader"]["retry_wait_time"]
+    resume_enabled = config["resume"]["enabled"]
+    destination_path = config["gcs"]["destination_path"]
 
-    for attempt in range(max_retries):
+    while True:
+        url = download_queue.get()
+        if url is None:
+            break
+
         try:
-            response = requests.get(url, stream=True)
-            response.raise_for_status()
-            
-            temp_local_path = os.path.join(download_dir, os.path.basename(url.split("?")[0]))
-            
-            with open(temp_local_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            
-            if callback:
-                callback(url, temp_local_path)
-            
-            return url, temp_local_path, None
-        except requests.exceptions.RequestException as e:
-            if attempt < max_retries - 1:
-                time.sleep(retry_wait_time)
-            else:
-                return url, None, e
+            if resume_enabled and uploader and uploader.check_file_exists(url):
+                tqdm.write(f"Skipping already existing file: {url}")
+                continue
 
-def download_and_process_files(urls, download_dir, max_threads, max_retries, retry_wait_time, uploader=None, callback=None):
-    """Downloads multiple files in parallel and processes them using a callback."""
-    if not os.path.exists(download_dir):
-        os.makedirs(download_dir)
-
-    with ThreadPoolExecutor(max_workers=max_threads) as executor:
-        future_to_url = {
-            executor.submit(download_file, url, download_dir, max_retries, retry_wait_time, uploader, callback): url
-            for url in urls
-        }
-        for future in tqdm(as_completed(future_to_url), total=len(urls), desc="Processing URLs"):
-            url, _, result = future.result()
-            if result == "skipped":
-                pass
-            elif result is not None:
-                tqdm.write(f"Failed to download {url} after {max_retries} retries: {result}")
+            for attempt in range(max_retries):
+                try:
+                    response = requests.get(url, stream=True)
+                    response.raise_for_status()
+                    
+                    # Ensure the filename is valid
+                    base_name = os.path.basename(url.split("?")[0])
+                    if not base_name:
+                        base_name = "downloaded_file" # fallback for URLs ending in /
+                    
+                    temp_local_path = os.path.join(download_dir, base_name)
+                    
+                    with open(temp_local_path, "wb") as f:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                    
+                    gcs_object_name = get_gcs_object_name(url, destination_path) if uploader else None
+                    upload_queue.put({"local_path": temp_local_path, "gcs_object_name": gcs_object_name, "source_url": url})
+                    break # Exit retry loop on success
+                except requests.exceptions.RequestException as e:
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_wait_time)
+                    else:
+                        tqdm.write(f"Failed to download {url} after {max_retries} retries: {e}")
+        finally:
+            download_queue.task_done()
