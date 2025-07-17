@@ -1,18 +1,15 @@
 # cdown: A Multi-threaded Cloud Downloader
 
-`cdown` is a powerful and configurable multi-threaded downloader written in Python. It can read a list of URLs from various sources, download the files concurrently, and upload them to Google Cloud Storage. The GCS object name is a hash of the source URL, ensuring that a URL is only ever downloaded and stored once.
+`cdown` is a powerful and configurable multi-threaded downloader written in Python. It can read a list of URLs from various sources, download the files concurrently, and optionally upload them to Google Cloud Storage. It now supports downloading from YouTube.
 
 ## Features
 
+*   **YouTube Support**: Downloads videos from YouTube using `yt-dlp`.
 *   **Concurrent Downloading and Uploading**: Downloads and uploads multiple files in parallel to maximize throughput.
 *   **Idempotent**: By hashing the source URL to create the GCS object name, `cdown` ensures that a file from a given URL is only downloaded once.
 *   **Resumable**: Can resume a previous run and automatically skips files that already exist in the destination.
-*   **Multiple Input Sources**: Reads URLs from:
-    *   CSV files
-    *   BigQuery tables
-    *   Google Sheets
-    *   Plain text files
-*   **Configurable**: All aspects of the downloader can be configured through a `config.yaml` file.
+*   **Multiple Input Sources**: Reads URLs from CSV files, BigQuery tables, Google Sheets, or plain text files.
+*   **Flexible Configuration**: Configure via a `config.yaml` file, environment variables, or a combination of both. Ideal for local and cloud environments like Google Cloud Run.
 *   **Error Handling**: Retries downloads on failure with configurable wait times.
 
 ## Installation
@@ -25,39 +22,60 @@ uv tool install git+https://github.com/codescv/cdown.git
 
 ## Usage
 
-Once installed, you can run the downloader from the command line:
+### Command-Line Options
+
+*   `--config`: Specifies the path to the configuration file. Defaults to `config.yaml` in the current directory.
 
 ```bash
 cdown --config /path/to/your/config.yaml
 ```
 
-### Command-Line Options
-
-*   `--config`: Specifies the path to the configuration file. Defaults to `config.yaml` in the current directory.
-
 ### Configuration
 
-The downloader is configured using a YAML file. Here is an overview of the available options:
+`cdown` uses a hierarchical configuration system with the following priority:
+
+1.  **Environment Variables** (Highest priority)
+2.  **`config.yaml` file**
+3.  **Default values** (Lowest priority)
+
+This allows you to set base configurations in a file and override them for specific environments (like Docker or Google Cloud Run) using environment variables.
+
+#### Environment Variables
+
+Environment variables must be prefixed with `CDOWN_`. The structure is based on the YAML configuration, with sections separated by double underscores (`__`).
+
+**Examples:**
+*   `gcs.project_id` becomes `CDOWN_GCS__PROJECT_ID`
+*   `downloader.max_threads` becomes `CDOWN_DOWNLOADER__MAX_THREADS`
+
+#### `config.yaml`
+
+Here is an overview of the available options in the `config.yaml` file:
 
 ```yaml
 # Input configuration
 input:
   type: "csv" # Options: "csv", "bigquery", "google_sheet", "text"
-  source: "path/to/your/input.csv" # Path to file, BigQuery table ID, or Google Sheet name
-  url_column: "url" # Required for "csv", "bigquery", and "google_sheet" types
+  source: "path/to/your/input.csv" # Path to file, BQ table, or Google Sheet
+  url_column: "url" # Required for "csv", "bigquery", and "google_sheet"
 
-# GCS Uploader configuration
+# GCS Uploader configuration (optional)
+# If project_id and bucket_name are not provided, upload is disabled.
 gcs:
   project_id: "your-gcp-project-id"
   bucket_name: "your-gcs-bucket-name"
-  destination_path: "downloads/" # Optional: a prefix in the bucket
+  destination_path: "downloads/"
 
 # Downloader configuration
 downloader:
   max_threads: 8
   max_retries: 3
   retry_wait_time: 5 # in seconds
-  download_dir: "/tmp/cdown_downloads" # Temporary local directory for downloads
+  download_dir: "/tmp/cdown_downloads"
+
+# Uploader configuration
+uploader:
+  max_threads: 8
 
 # Resume functionality
 resume:
@@ -66,17 +84,43 @@ resume:
 
 ### Authentication
 
-To use Google Cloud services (BigQuery, Google Cloud Storage, Google Sheets), you need to be authenticated. The recommended way is to use Application Default Credentials (ADC). You can set this up by running:
+To use Google Cloud services (BigQuery, GCS, Google Sheets), you need to be authenticated. The recommended way is to use Application Default Credentials (ADC).
 
 ```bash
 gcloud auth application-default login
 ```
 
-For Google Sheets, you may also need to configure OAuth 2.0. Please refer to the [gspread authentication documentation](https://docs.gspread.org/en/latest/oauth2.html) for detailed instructions.
+## Running with Docker (and Google Cloud Run)
+
+This project includes a `Dockerfile` for easy containerization, which is ideal for deployment on services like Google Cloud Run.
+
+1.  **Build the Docker image:**
+    ```bash
+    docker build -t cdown .
+    ```
+
+2.  **Run the container:**
+    You can configure the application entirely through environment variables when running the container.
+
+    **Example (downloading locally without uploading):**
+    ```bash
+    docker run --rm -v ./local_urls.txt:/app/urls.txt -v ./local_downloads:/tmp/cdown_downloads cdown
+    ```
+    *This command mounts a local URL file and a local output directory.*
+
+    **Example (downloading and uploading to GCS):**
+    ```bash
+    docker run --rm \
+      -v ./local_urls.txt:/app/urls.txt \
+      -e CDOWN_GCS__PROJECT_ID="your-gcp-project" \
+      -e CDOWN_GCS__BUCKET_NAME="your-gcs-bucket" \
+      -e GOOGLE_APPLICATION_CREDENTIALS="/path/to/creds.json" \
+      -v /path/to/gcp/creds.json:/path/to/creds.json:ro \
+      cdown
+    ```
+    *This example mounts GCP credentials and configures the GCS uploader via environment variables.*
 
 ## Development
-
-To work on `cdown` locally, follow these steps:
 
 1.  **Clone the repository:**
     ```bash
@@ -84,12 +128,11 @@ To work on `cdown` locally, follow these steps:
     cd cdown
     ```
 
-2.  **Create and activate a virtual environment using `uv`:**
+2.  **Create and activate a virtual environment:**
     ```bash
     uv sync
     source .venv/bin/activate
     ```
-    This should automatically install the cdown script in the virtual env.
 
 3.  **Run the tool:**
     ```bash

@@ -18,6 +18,7 @@ def _download_youtube_video(url, download_dir):
         'outtmpl': temp_template,
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'merge_output_format': 'mp4',
+        'quiet': True,
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -74,7 +75,8 @@ def download_worker(download_queue, upload_queue, config, uploader, pbar, upload
         try:
             if resume_enabled and uploader and uploader.check_file_exists(url):
                 tqdm.write(f"Skipping already existing file: {url}")
-                upload_pbar.update(1)
+                if uploader:
+                    upload_pbar.update(1)
                 continue
 
             for attempt in range(max_retries):
@@ -84,15 +86,21 @@ def download_worker(download_queue, upload_queue, config, uploader, pbar, upload
                     else:
                         temp_local_path = _download_standard_file(url, download_dir)
                     
-                    gcs_object_name = get_gcs_object_name(url, destination_path)
-                    upload_queue.put({"local_path": temp_local_path, "gcs_object_name": gcs_object_name, "source_url": url})
+                    if uploader:
+                        gcs_object_name = get_gcs_object_name(url, destination_path)
+                        upload_queue.put({"local_path": temp_local_path, "gcs_object_name": gcs_object_name, "source_url": url})
+                    else:
+                        # If no uploader, we're done with this file.
+                        # The file remains in the local download directory.
+                        pass
                     break  # Success
                 except (requests.exceptions.RequestException, yt_dlp.utils.DownloadError) as e:
                     if attempt < max_retries - 1:
                         time.sleep(retry_wait_time)
                     else:
                         tqdm.write(f"Failed to download {url} after {max_retries} retries: {e}")
-                        upload_pbar.update(1)
+                        if uploader:
+                            upload_pbar.update(1)
         finally:
             pbar.update(1)
             download_queue.task_done()
