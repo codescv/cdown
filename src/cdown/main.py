@@ -31,54 +31,54 @@ def main():
 
     downloader_config = config["downloader"]
     num_download_threads = downloader_config["max_threads"]
-    # Add a new config for upload threads, or use the same for now
     num_upload_threads = config.get("uploader", {}).get("max_threads", num_download_threads)
 
-    # Create download directory
+    # Create download directory safely
     download_dir = downloader_config["download_dir"]
     os.makedirs(download_dir, exist_ok=True)
 
-    # Create and start download workers
-    download_threads = []
-    for _ in range(num_download_threads):
-        thread = Thread(target=download_worker, args=(download_queue, upload_queue, config, uploader))
-        thread.start()
-        download_threads.append(thread)
+    with tqdm(total=len(urls), desc="Downloading") as download_pbar, \
+         tqdm(total=len(urls), desc="Uploading") as upload_pbar:
 
-    # Create and start upload workers
-    upload_threads = []
-    for _ in range(num_upload_threads):
-        thread = Thread(target=upload_worker, args=(upload_queue, uploader))
-        thread.start()
-        upload_threads.append(thread)
+        # Create and start download workers
+        download_threads = []
+        for _ in range(num_download_threads):
+            thread = Thread(target=download_worker, args=(download_queue, upload_queue, config, uploader, download_pbar, upload_pbar))
+            thread.start()
+            download_threads.append(thread)
 
-    # Populate the download queue
-    for url in tqdm(urls, desc="Queueing URLs"):
-        download_queue.put(url)
+        # Create and start upload workers
+        upload_threads = []
+        for _ in range(num_upload_threads):
+            thread = Thread(target=upload_worker, args=(upload_queue, uploader, upload_pbar))
+            thread.start()
+            upload_threads.append(thread)
 
-    # Wait for all downloads to complete
-    download_queue.join()
-    tqdm.write("All URLs have been processed by download workers.")
+        # Populate the download queue
+        for url in urls:
+            download_queue.put(url)
 
-    # Signal download workers to stop
-    for _ in range(num_download_threads):
-        download_queue.put(None)
+        # Wait for all downloads to complete
+        download_queue.join()
 
-    # Wait for all uploads to complete
-    upload_queue.join()
-    tqdm.write("All downloaded files have been uploaded.")
+        # Signal download workers to stop
+        for _ in range(num_download_threads):
+            download_queue.put(None)
 
-    # Signal upload workers to stop
-    for _ in range(num_upload_threads):
-        upload_queue.put(None)
+        # Wait for all uploads to complete
+        upload_queue.join()
 
-    # Wait for all threads to finish
-    for thread in download_threads:
-        thread.join()
-    for thread in upload_threads:
-        thread.join()
+        # Signal upload workers to stop
+        for _ in range(num_upload_threads):
+            upload_queue.put(None)
+
+        # Wait for all threads to finish
+        for thread in download_threads:
+            thread.join()
+        for thread in upload_threads:
+            thread.join()
     
-    tqdm.write("All threads have finished. Execution complete.")
+    print("Execution complete.")
 
 if __name__ == "__main__":
     main()

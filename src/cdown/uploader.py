@@ -37,7 +37,7 @@ class Uploader:
         blob = self.bucket.blob(gcs_object_name)
         return blob.exists()
 
-def upload_worker(upload_queue, uploader):
+def upload_worker(upload_queue, uploader, pbar):
     """Worker function to upload files from a queue."""
     while True:
         item = upload_queue.get()
@@ -56,4 +56,5 @@ def upload_worker(upload_queue, uploader):
         finally:
             if os.path.exists(local_path):
                 os.remove(local_path)
+            pbar.update(1)
             upload_queue.task_done()
