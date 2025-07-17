@@ -1,0 +1,30 @@
+steps:
+  # Step 0: Print commit SHA for debugging
+  - name: 'gcr.io/cloud-builders/git'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - 'echo "Commit SHA: $COMMIT_SHA"'
+    id: 'Debug SHA'
+
+  # Step 1: Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        TAG_NAME="${COMMIT_SHA:-latest}"
+        docker build \
+          -t us-central1-docker.pkg.dev/$PROJECT_ID/cdown/cdown:$$TAG_NAME \
+          .
+    id: 'Build'
+
+  # Step 2: Push the image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        TAG_NAME="${COMMIT_SHA:-latest}"
+        docker push us-central1-docker.pkg.dev/$PROJECT_ID/cdown/cdown:$$TAG_NAME
+    id: 'Push'

@@ -42,11 +42,11 @@ This allows you to set base configurations in a file and override them for speci
 
 #### Environment Variables
 
-Environment variables must be prefixed with `CDOWN_`. The structure is based on the YAML configuration, with sections separated by double underscores (`__`).
+Environment variables must be prefixed with `CDOWN_`.
 
 **Examples:**
-*   `gcs.project_id` becomes `CDOWN_GCS__PROJECT_ID`
-*   `downloader.max_threads` becomes `CDOWN_DOWNLOADER__MAX_THREADS`
+*   `gcs.project_id` becomes `CDOWN_GCS_PROJECT_ID`
+*   `downloader.max_threads` becomes `CDOWN_DOWNLOADER_MAX_THREADS`
 
 #### `config.yaml`
 
@@ -90,35 +90,24 @@ To use Google Cloud services (BigQuery, GCS, Google Sheets), you need to be auth
 gcloud auth application-default login
 ```
 
-## Running with Docker (and Google Cloud Run)
+## Running on Google Cloud Run
 
 This project includes a `Dockerfile` for easy containerization, which is ideal for deployment on services like Google Cloud Run.
 
-1.  **Build the Docker image:**
+1.  **Create Artifact Registry Repo:**
     ```bash
-    docker build -t cdown .
+    gcloud artifacts repositories create cdown --project=your-gcp-project --location=us-central1 --repository-format=docker
     ```
 
-2.  **Run the container:**
-    You can configure the application entirely through environment variables when running the container.
-
-    **Example (downloading locally without uploading):**
+2.  **Build the Image**
     ```bash
-    docker run --rm -v ./local_urls.txt:/app/urls.txt -v ./local_downloads:/tmp/cdown_downloads cdown
+    gcloud builds submit --config cloudbuild.yaml --project=your-gcp-project
     ```
-    *This command mounts a local URL file and a local output directory.*
 
-    **Example (downloading and uploading to GCS):**
-    ```bash
-    docker run --rm \
-      -v ./local_urls.txt:/app/urls.txt \
-      -e CDOWN_GCS__PROJECT_ID="your-gcp-project" \
-      -e CDOWN_GCS__BUCKET_NAME="your-gcs-bucket" \
-      -e GOOGLE_APPLICATION_CREDENTIALS="/path/to/creds.json" \
-      -v /path/to/gcp/creds.json:/path/to/creds.json:ro \
-      cdown
-    ```
-    *This example mounts GCP credentials and configures the GCS uploader via environment variables.*
+3.  **Run with Cloud Run**
+Now you can run with a [Cloud Run Job](https://pantheon.corp.google.com/run/jobs/create).
+Use enviroment varibles to override the input and output etc.
+
 
 ## Development
 
