@@ -9,7 +9,7 @@ def _is_youtube_url(url):
     """Checks if a URL is a YouTube URL."""
     return "youtube.com" in url or "youtu.be" in url
 
-def _download_youtube_video(url, download_dir):
+def _download_youtube_video(url, download_dir, cookies_file=None):
     """Downloads a YouTube video using yt-dlp."""
     
     temp_template = os.path.join(download_dir, '%(id)s.%(ext)s')
@@ -20,6 +20,9 @@ def _download_youtube_video(url, download_dir):
         'merge_output_format': 'mp4',
         'quiet': True,
     }
+
+    if cookies_file:
+        ydl_opts['cookies'] = cookies_file
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
@@ -82,7 +85,7 @@ def download_worker(download_queue, upload_queue, config, uploader, pbar, upload
             for attempt in range(max_retries):
                 try:
                     if _is_youtube_url(url):
-                        temp_local_path = _download_youtube_video(url, download_dir)
+                        temp_local_path = _download_youtube_video(url, download_dir, config["downloader"].get("cookies_file"))
                     else:
                         temp_local_path = _download_standard_file(url, download_dir)
                     

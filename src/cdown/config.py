@@ -23,7 +23,8 @@ def _get_default_config():
             "max_threads": 4,
             "max_retries": 3,
             "retry_wait_time": 5,
-            "download_dir": "/tmp/cdown_downloads"
+            "download_dir": "/tmp/cdown_downloads",
+            "cookies_file": None
         },
         "uploader": {
             "max_threads": 4

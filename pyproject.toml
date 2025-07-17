@@ -22,7 +22,6 @@ cdown = "cdown.main:main"
 
 [tool.uv]
 dev-dependencies = [
-    "pytest",
     "pyright"
 ]
 package = true

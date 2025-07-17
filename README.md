@@ -72,6 +72,7 @@ downloader:
   max_retries: 3
   retry_wait_time: 5 # in seconds
   download_dir: "/tmp/cdown_downloads"
+  cookies_file: "/path/to/your/cookies.txt" # Optional: Path to a cookies file for yt-dlp
 
 # Uploader configuration
 uploader:
