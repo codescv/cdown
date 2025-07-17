@@ -13,7 +13,8 @@ dependencies = [
     "pandas",
     "google-auth-oauthlib",
     "db-dtypes",
-    "tqdm"
+    "tqdm",
+    "yt-dlp"
 ]
 
 [project.scripts]
