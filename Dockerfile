@@ -3,7 +3,7 @@ FROM python:3.10-slim
 
 # Install git (required for git installs) and uv
 RUN apt-get update && \
-    apt-get install -y git --no-install-recommends && \
+    apt-get install -y git ffmpeg --no-install-recommends && \
     rm -rf /var/lib/apt/lists/* && \
     pip install uv
 

@@ -1,10 +1,11 @@
 import requests
+import tempfile
 import os
 import time
 import yt_dlp
 from tqdm import tqdm
 from cdown.uploader import get_gcs_object_name
-from cdown.config import logger
+
 
 def _is_youtube_url(url):
     """Checks if a URL is a YouTube URL."""
@@ -23,9 +24,10 @@ def _download_youtube_video(url, download_dir, cookies_file=None):
     }
 
     if cookies_file:
-        ydl_opts['cookiefile'] = cookies_file
-        with open(cookies_file) as f:
-            logger.info('cookies file: %s bytes', len(f.read()))
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, encoding="utf-8", suffix=".txt") as fp_named:
+            with open(cookies_file) as f:
+                fp_named.write(f.read())
+            ydl_opts['cookiefile'] = fp_named.name
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
