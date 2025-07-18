@@ -23,9 +23,9 @@ def _download_youtube_video(url, download_dir, cookies_file=None):
     }
 
     if cookies_file:
-        ydl_opts['cookies'] = cookies_file
-
-    logger.info('YT options: %s', ydl_opts)
+        ydl_opts['cookiefile'] = cookies_file
+        with open(cookies_file) as f:
+            logger.info('cookies file: %s bytes', len(f.read()))
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
